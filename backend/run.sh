@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -e
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+cd "$DIR"
+
+if [ -d ".venv" ]; then
+    source .venv/bin/activate
+fi
+
+echo "Starting Sahayak AI Backend on http://0.0.0.0:8000"
+exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
