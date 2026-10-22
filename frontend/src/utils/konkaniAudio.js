@@ -64,30 +64,64 @@ export function playSosAlarm() {
   }
 }
 
-/** Spoken Konkani TTS using Web Speech API */
-export function speakKonkaniText(text) {
-  if (!('speechSynthesis' in window)) {
-    console.warn("Web Speech API not supported.");
-    return;
+let activeAudio = null;
+
+/** Plays base64 MP3 studio voice directly */
+export function playBase64Audio(base64Data) {
+  try {
+    if (activeAudio) {
+      activeAudio.pause();
+    }
+    const audio = new Audio(`data:audio/mp3;base64,${base64Data}`);
+    activeAudio = audio;
+    audio.play().catch(e => console.warn("Autoplay notice:", e));
+    return true;
+  } catch (e) {
+    console.warn("Base64 audio playback failed:", e);
+    return false;
   }
-
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-
-  // Pick best available voice (kok-IN, mr-IN, hi-IN, or en-IN)
-  const voices = window.speechSynthesis.getVoices();
-  const konkaniVoice = voices.find(v => 
-    v.lang.includes('kok') || 
-    v.lang.includes('mr-IN') || 
-    v.lang.includes('hi-IN') || 
-    v.lang.includes('en-IN')
-  );
-
-  if (konkaniVoice) {
-    utterance.voice = konkaniVoice;
-  }
-  utterance.rate = 0.95; // slightly slower for senior/blind clarity
-  utterance.pitch = 1.05;
-
-  window.speechSynthesis.speak(utterance);
 }
+
+/** Spoken Konkani using Google Cloud Neural Human Studio Voice */
+export async function speakKonkaniText(text, audioBase64 = null) {
+  if (audioBase64) {
+    const ok = playBase64Audio(audioBase64);
+    if (ok) return;
+  }
+
+  // Attempt to fetch Google Neural audio from backend
+  try {
+    const res = await fetch("http://localhost:8000/api/voice/synthesize", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.audio_base64) {
+        const ok = playBase64Audio(data.audio_base64);
+        if (ok) return;
+      }
+    }
+  } catch (err) {
+    console.warn("Neural audio synthesis request failed:", err);
+  }
+
+  // Fallback to browser SpeechSynthesis only if server audio fails
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    const voices = window.speechSynthesis.getVoices();
+    const konkaniVoice = voices.find(v => 
+      v.lang.includes('kok') || 
+      v.lang.includes('mr-IN') || 
+      v.lang.includes('hi-IN') || 
+      v.lang.includes('en-IN')
+    );
+    if (konkaniVoice) utterance.voice = konkaniVoice;
+    utterance.rate = 0.95;
+    utterance.pitch = 1.05;
+    window.speechSynthesis.speak(utterance);
+  }
+}
+

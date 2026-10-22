@@ -139,44 +139,54 @@ def rule_based_fallback(prompt: str) -> VoiceProcessResponse:
     )
 
 
+from app.audio_service import synthesize_google_neural_audio
+
 async def process_konkani_voice_prompt(prompt: str) -> VoiceProcessResponse:
     """Processes Konkani voice or text prompt using Gemini 2.5 Flash, falling back gracefully to local Goa NLP."""
+    res: VoiceProcessResponse = None
     if not GEMINI_API_KEY:
         logger.info("No GEMINI_API_KEY detected. Using Goa localized intelligent Konkani NLP engine.")
-        return rule_based_fallback(prompt)
+        res = rule_based_fallback(prompt)
+    else:
+        try:
+            from google import genai
+            from google.genai import types
 
-    try:
-        from google import genai
-        from google.genai import types
-
-        client = genai.Client(api_key=GEMINI_API_KEY)
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                system_instruction=KONKANI_SYSTEM_PROMPT,
-                response_mime_type="application/json",
-                temperature=0.2,
+            client = genai.Client(api_key=GEMINI_API_KEY)
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    system_instruction=KONKANI_SYSTEM_PROMPT,
+                    response_mime_type="application/json",
+                    temperature=0.2,
+                )
             )
-        )
 
-        data = json.loads(response.text)
-        pickup_loc = data.get("pickup_location", "Panaji KTC Bus Stand")
-        dest_loc = data.get("destination", "Goa Medical College (GMC) Bambolim")
+            data = json.loads(response.text)
+            pickup_loc = data.get("pickup_location", "Panaji KTC Bus Stand")
+            dest_loc = data.get("destination", "Goa Medical College (GMC) Bambolim")
 
-        return VoiceProcessResponse(
-            intent=data.get("intent", "request_companion"),
-            service_type=data.get("service_type", "hospital_visit"),
-            pickup_location=pickup_loc,
-            pickup_coords=get_coords_for_location(pickup_loc),
-            destination=dest_loc,
-            dest_coords=get_coords_for_location(dest_loc),
-            estimated_duration_minutes=int(data.get("estimated_duration_minutes", 45)),
-            coin_reward=int(data.get("coin_reward", 50)),
-            konkani_spoken_response=data.get("konkani_spoken_response", "Namaskar! Maka somzolem, hanv sahayak sodhta."),
-            english_translation=data.get("english_translation", "Hello! I understand and am matching a helper for you."),
-            confidence_score=float(data.get("confidence_score", 0.95))
-        )
-    except Exception as e:
-        logger.warning(f"Gemini call exception: {e}. Falling back to Goa localized Konkani NLP.")
-        return rule_based_fallback(prompt)
+            res = VoiceProcessResponse(
+                intent=data.get("intent", "request_companion"),
+                service_type=data.get("service_type", "hospital_visit"),
+                pickup_location=pickup_loc,
+                pickup_coords=get_coords_for_location(pickup_loc),
+                destination=dest_loc,
+                dest_coords=get_coords_for_location(dest_loc),
+                estimated_duration_minutes=int(data.get("estimated_duration_minutes", 45)),
+                coin_reward=int(data.get("coin_reward", 50)),
+                konkani_spoken_response=data.get("konkani_spoken_response", "Namaskar! Maka somzolem, hanv sahayak sodhta."),
+                english_translation=data.get("english_translation", "Hello! I understand and am matching a helper for you."),
+                confidence_score=float(data.get("confidence_score", 0.95))
+            )
+        except Exception as e:
+            logger.warning(f"Gemini call exception: {e}. Falling back to Goa localized Konkani NLP.")
+            res = rule_based_fallback(prompt)
+
+    # Attach natural Google Cloud Neural voice audio
+    if res and res.konkani_spoken_response:
+        res.audio_base64 = synthesize_google_neural_audio(res.konkani_spoken_response)
+
+    return res
+

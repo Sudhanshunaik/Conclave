@@ -4,6 +4,21 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000
  * Centralized API client for Sahayak AI FastAPI backend
  */
 
+export async function synthesizeAudio(text) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/voice/synthesize`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text })
+    });
+    if (!res.ok) throw new Error("Synthesis failed");
+    return await res.json();
+  } catch (err) {
+    console.warn("Audio synthesis error:", err);
+    return null;
+  }
+}
+
 export async function processVoicePrompt(prompt) {
   try {
     const res = await fetch(`${API_BASE_URL}/api/voice/process`, {

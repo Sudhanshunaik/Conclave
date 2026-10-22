@@ -26,6 +26,7 @@ class VoiceProcessResponse(BaseModel):
     konkani_spoken_response: str = Field(..., description="Spoken Konkani reply to read back to user")
     english_translation: str = Field(..., description="English translation of spoken response")
     confidence_score: float = Field(default=0.95)
+    audio_base64: Optional[str] = Field(default=None, description="Base64 encoded MP3 audio of human spoken voice")
 
 
 class TaskCreateRequest(BaseModel):

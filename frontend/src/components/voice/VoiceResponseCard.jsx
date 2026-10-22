@@ -20,6 +20,7 @@ export default function VoiceResponseCard({ response, onConfirmTask, isConfirmin
 
         <AudioSpeaker
           text={response.konkani_spoken_response}
+          audioBase64={response.audio_base64}
           label="Aikanvya (Listen)"
         />
       </div>

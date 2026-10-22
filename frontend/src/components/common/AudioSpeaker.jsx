@@ -2,14 +2,14 @@ import React from 'react';
 import { Volume2, VolumeX } from 'lucide-react';
 import { useSpeechSynthesis } from '../../hooks/useSpeechSynthesis';
 
-export default function AudioSpeaker({ text, label = "Aikanvya (Listen)" }) {
+export default function AudioSpeaker({ text, audioBase64 = null, label = "Aikanvya (Listen)" }) {
   const { isSpeaking, speak, cancel } = useSpeechSynthesis();
 
   const handleToggle = () => {
     if (isSpeaking) {
       cancel();
-    } else if (text) {
-      speak(text);
+    } else if (text || audioBase64) {
+      speak(text, { audioBase64 });
     }
   };
 

@@ -97,9 +97,9 @@ export default function App() {
         return;
       }
 
-      // Read response aloud in Konkani
+      // Read response aloud in natural Google Neural Studio Voice
       if (response.konkani_spoken_response) {
-        speak(response.konkani_spoken_response);
+        speak(response.konkani_spoken_response, { audioBase64: response.audio_base64 });
       }
     } catch (err) {
       console.error("Voice processing error:", err);

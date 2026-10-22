@@ -42,10 +42,23 @@ def read_root():
 
 @app.post("/api/voice/process", response_model=VoiceProcessResponse)
 async def process_voice(req: VoiceProcessRequest):
-    """Processes spoken or typed Konkani input and extracts structured task details."""
+    """Processes spoken or typed Konkani input and extracts structured task details with natural audio."""
     if not req.prompt or not req.prompt.strip():
         raise HTTPException(status_code=400, detail="Voice prompt cannot be empty")
     return await process_konkani_voice_prompt(req.prompt.strip())
+
+
+class SynthesizeVoiceRequest(BaseModel):
+    text: str
+
+
+@app.post("/api/voice/synthesize")
+def synthesize_voice(req: SynthesizeVoiceRequest):
+    """Synthesizes human-sounding neural studio voice for any Konkani/English text."""
+    from app.audio_service import synthesize_google_neural_audio
+    audio_b64 = synthesize_google_neural_audio(req.text)
+    return {"text": req.text, "audio_base64": audio_b64}
+
 
 
 @app.post("/api/tasks", response_model=Task)
